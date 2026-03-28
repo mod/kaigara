@@ -112,6 +112,22 @@ GET  /health              → {"status": "ok", "service": "sandbox"}
 POST /exec                → runs shell command in /workspace, returns stdout/stderr/exit_code
 ```
 
+## RBAC
+
+Kaigara includes a simple role-based access control system with three roles:
+
+| Role | Shell | Tools | Guard rails |
+|------|-------|-------|-------------|
+| **Owner** | full access | all tools | none |
+| **Member** | full access | elevated subset | standard limits |
+| **Guest** | no access | restricted subset | strict — output filtering, command blocklist, token limits |
+
+- **Owner** — unrestricted. Can use shell, all tools, and manage other users.
+- **Member** — elevated permissions. Full shell access and most tools, but no user management or secret-adjacent operations.
+- **Guest** — most secure environment. No shell access, limited tool set, with additional guard rails (output sanitization, token budgets, blocked tool categories) to minimize extraction risk.
+
+Roles are assigned per session and enforced at the agent gateway before requests are proxied to tools or sandbox.
+
 ## Security Model
 
 - The agent container has **zero secrets** in its environment
