@@ -1,0 +1,38 @@
+services:
+  agent:
+    build: .
+    command: ["uv", "run", "uvicorn", "agent.server:app", "--host", "0.0.0.0", "--port", "8080"]
+    environment:
+      - TOOLS_URL=http://tools:9000
+      - SANDBOX_URL=http://sandbox:9001
+    volumes:
+      - sessions:/data/sessions
+    ports:
+      - "8080:8080"
+    depends_on:
+      - tools
+      - sandbox
+
+  tools:
+    build: .
+    command: ["uv", "run", "uvicorn", "tools.server:app", "--host", "0.0.0.0", "--port", "9000"]
+    env_file:
+      - .env.tools
+    security_opt:
+      - no-new-privileges:true
+
+  sandbox:
+    build: .
+    command: ["uv", "run", "uvicorn", "sandbox.server:app", "--host", "0.0.0.0", "--port", "9001"]
+    volumes:
+      - workspace:/workspace
+    security_opt:
+      - no-new-privileges:true
+    read_only: true
+    tmpfs:
+      - /tmp
+      - /root/.cache
+
+volumes:
+  sessions:
+  workspace:
