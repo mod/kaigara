@@ -1,6 +1,6 @@
 [project]
 name = "kaigara"
-version = "0.1.0"
+version = "0.2.0"
 description = "Secure agent stack with container-isolated secrets"
 readme = "README.md"
 requires-python = ">=3.12"
@@ -8,4 +8,34 @@ dependencies = [
     "fastapi>=0.115",
     "uvicorn>=0.34",
     "httpx>=0.28",
+    "rich>=13.0",
+    "prompt-toolkit>=3.0",
 ]
+
+[project.optional-dependencies]
+telegram = ["python-telegram-bot>=21.0"]
+slack = ["slack-bolt>=1.20", "slack-sdk>=3.30"]
+browser = ["playwright>=1.48"]
+mcp = ["mcp>=1.0"]
+cron = ["croniter>=2.0"]
+all = [
+    "python-telegram-bot>=21.0",
+    "slack-bolt>=1.20",
+    "slack-sdk>=3.30",
+    "playwright>=1.48",
+    "mcp>=1.0",
+    "croniter>=2.0",
+]
+
+[project.scripts]
+kaigara = "cli:main"
+kaigara-gateway = "gateway.run:main"
+
+[dependency-groups]
+dev = [
+    "pytest>=8.0",
+    "pytest-asyncio>=0.25",
+]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"

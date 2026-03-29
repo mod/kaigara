@@ -1,10 +1,14 @@
 services:
   agent:
     build: .
-    command: ["uv", "run", "uvicorn", "agent.server:app", "--host", "0.0.0.0", "--port", "8080"]
+    command: ["uvicorn", "agent.server:app", "--host", "0.0.0.0", "--port", "8080"]
+    container_name: kaigara-agent
+    hostname: agent
     environment:
       - TOOLS_URL=http://tools:9000
       - SANDBOX_URL=http://sandbox:9001
+      - OPENROUTER_API_KEY=${OPENROUTER_API_KEY:-}
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
     volumes:
       - sessions:/data/sessions
     ports:
@@ -12,18 +16,41 @@ services:
     depends_on:
       - tools
       - sandbox
+    networks:
+      - kaigara
 
   tools:
     build: .
-    command: ["uv", "run", "uvicorn", "tools.server:app", "--host", "0.0.0.0", "--port", "9000"]
-    env_file:
-      - .env.tools
+    command: ["uvicorn", "tools.server:app", "--host", "0.0.0.0", "--port", "9000"]
+    container_name: kaigara-tools
+    hostname: tools
+    environment:
+      - SANDBOX_URL=http://sandbox:9001
+      - FIRECRAWL_API_KEY=${FIRECRAWL_API_KEY:-}
+      - FIRECRAWL_API_URL=${FIRECRAWL_API_URL:-}
+      - TAVILY_API_KEY=${TAVILY_API_KEY:-}
+      - SEARXNG_URL=${SEARXNG_URL:-}
+      - WEB_BACKEND=${WEB_BACKEND:-}
+      - GITHUB_TOKEN=${GITHUB_TOKEN:-}
+      - TERMINAL_ENV=${TERMINAL_ENV:-sandbox}
+      - TERMINAL_CONTAINER_IMAGE=${TERMINAL_CONTAINER_IMAGE:-}
+      - TERMINAL_CONTAINER_CPUS=${TERMINAL_CONTAINER_CPUS:-}
+      - TERMINAL_CONTAINER_MEMORY=${TERMINAL_CONTAINER_MEMORY:-}
+      - MCP_SERVERS=${MCP_SERVERS:-}
+      - MCP_CONFIG_FILE=${MCP_CONFIG_FILE:-}
+      - KAIGARA_PLUGINS_DIR=${KAIGARA_PLUGINS_DIR:-}
+    volumes:
+      - kaigara-data:/data
     security_opt:
       - no-new-privileges:true
+    networks:
+      - kaigara
 
   sandbox:
     build: .
-    command: ["uv", "run", "uvicorn", "sandbox.server:app", "--host", "0.0.0.0", "--port", "9001"]
+    command: ["uvicorn", "sandbox.server:app", "--host", "0.0.0.0", "--port", "9001"]
+    container_name: kaigara-sandbox
+    hostname: sandbox
     volumes:
       - workspace:/workspace
     security_opt:
@@ -32,7 +59,40 @@ services:
     tmpfs:
       - /tmp
       - /root/.cache
+    networks:
+      - kaigara
+
+  gateway:
+    build: .
+    command: ["python", "-m", "gateway.run"]
+    container_name: kaigara-gateway
+    hostname: gateway
+    environment:
+      - AGENT_URL=http://agent:8080
+      - GATEWAY_ROLE=${GATEWAY_ROLE:-owner}
+      - GATEWAY_MODEL=${GATEWAY_MODEL:-}
+      - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN:-}
+      - TELEGRAM_ALLOWED_USERS=${TELEGRAM_ALLOWED_USERS:-}
+      - TELEGRAM_HOME_CHANNEL=${TELEGRAM_HOME_CHANNEL:-}
+      - SLACK_BOT_TOKEN=${SLACK_BOT_TOKEN:-}
+      - SLACK_APP_TOKEN=${SLACK_APP_TOKEN:-}
+      - SLACK_ALLOWED_USERS=${SLACK_ALLOWED_USERS:-}
+      - SESSION_IDLE_MINUTES=${SESSION_IDLE_MINUTES:-1440}
+      - KAIGARA_DATA_DIR=/data
+    volumes:
+      - kaigara-data:/data
+    depends_on:
+      - agent
+    networks:
+      - kaigara
+    profiles:
+      - gateway
+
+networks:
+  kaigara:
+    driver: bridge
 
 volumes:
   sessions:
   workspace:
+  kaigara-data:
